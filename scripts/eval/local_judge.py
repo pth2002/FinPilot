@@ -16,9 +16,10 @@ import sys
 # ============================================================
 # 1. 读取回答文件
 # ============================================================
-ANSWERS_PATH = r"D:\项目1\eval_answers.json"
-OUTPUT_JSON  = r"D:\项目1\eval_results.json"
-OUTPUT_MD    = r"D:\项目1\eval_report.md"
+_DIR = os.path.dirname(os.path.abspath(__file__))
+ANSWERS_PATH = os.path.join(_DIR, "eval_answers.json")
+OUTPUT_JSON  = os.path.join(_DIR, "eval_results.json")
+OUTPUT_MD    = os.path.join(_DIR, "eval_report.md")
 
 if not os.path.exists(ANSWERS_PATH):
     print(f"错误：找不到 {ANSWERS_PATH}，请先在 AutoDL 上运行 generate_answers.py 并下载结果")
