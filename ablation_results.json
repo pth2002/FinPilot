@@ -1,0 +1,152 @@
+{
+  "quant_fp16": {
+    "group": "量化消融",
+    "label": "FP16",
+    "use_4bit": false,
+    "train_loss": 2.0018,
+    "eval_loss": 2.0345,
+    "eval_ppl": 7.65,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 18:55:28"
+  },
+  "quant_4bit": {
+    "group": "量化消融",
+    "label": "4bit QLoRA",
+    "use_4bit": true,
+    "train_loss": 2.0242,
+    "eval_loss": 2.0585,
+    "eval_ppl": 7.83,
+    "train_time_min": 13.8,
+    "finished_at": "2026-04-05 19:09:33"
+  },
+  "rank_4": {
+    "group": "rank消融",
+    "label": "rank=4",
+    "use_4bit": false,
+    "train_loss": 2.0649,
+    "eval_loss": 2.0845,
+    "eval_ppl": 8.04,
+    "train_time_min": 6.7,
+    "finished_at": "2026-04-05 19:16:28"
+  },
+  "rank_16": {
+    "group": "rank消融",
+    "label": "rank=16",
+    "use_4bit": false,
+    "train_loss": 2.0032,
+    "eval_loss": 2.0348,
+    "eval_ppl": 7.65,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 19:23:21"
+  },
+  "rank_64": {
+    "group": "rank消融",
+    "label": "rank=64",
+    "use_4bit": false,
+    "train_loss": 1.9201,
+    "eval_loss": 1.9863,
+    "eval_ppl": 7.29,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 19:30:13"
+  },
+  "target_qv": {
+    "group": "target_modules消融",
+    "label": "q_proj+v_proj",
+    "use_4bit": false,
+    "train_loss": 2.0032,
+    "eval_loss": 2.0348,
+    "eval_ppl": 7.65,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 19:37:08"
+  },
+  "target_all": {
+    "group": "target_modules消融",
+    "label": "全部线性层",
+    "use_4bit": false,
+    "train_loss": 1.703,
+    "eval_loss": 1.9066,
+    "eval_ppl": 6.73,
+    "train_time_min": 8.7,
+    "finished_at": "2026-04-05 19:46:07"
+  },
+  "data_5000": {
+    "group": "数据量消融",
+    "label": "全量5000条",
+    "use_4bit": false,
+    "train_loss": 2.0032,
+    "eval_loss": 2.0348,
+    "eval_ppl": 7.65,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 19:52:57"
+  },
+  "data_1500": {
+    "group": "数据量消融",
+    "label": "随机抽样1500条",
+    "use_4bit": false,
+    "train_loss": 2.0818,
+    "eval_loss": 2.0914,
+    "eval_ppl": 8.1,
+    "train_time_min": 2.0,
+    "finished_at": "2026-04-05 19:55:06"
+  },
+  "lr_1e3": {
+    "group": "学习率消融",
+    "label": "lr=1e-3",
+    "use_4bit": false,
+    "train_loss": 1.7264,
+    "eval_loss": 1.9548,
+    "eval_ppl": 7.06,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 20:01:56"
+  },
+  "lr_1e4": {
+    "group": "学习率消融",
+    "label": "lr=1e-4",
+    "use_4bit": false,
+    "train_loss": 2.0032,
+    "eval_loss": 2.0348,
+    "eval_ppl": 7.65,
+    "train_time_min": 6.5,
+    "finished_at": "2026-04-05 20:08:45"
+  },
+  "lr_5e5": {
+    "group": "学习率消融",
+    "label": "lr=5e-5",
+    "use_4bit": false,
+    "train_loss": 2.0563,
+    "eval_loss": 2.0772,
+    "eval_ppl": 7.98,
+    "train_time_min": 6.5,
+    "finished_at": "2026-04-05 20:15:31"
+  },
+  "epoch_1": {
+    "group": "训练轮数消融",
+    "label": "1 epoch",
+    "use_4bit": false,
+    "train_loss": 2.1009,
+    "eval_loss": 2.1151,
+    "eval_ppl": 8.29,
+    "train_time_min": 2.2,
+    "finished_at": "2026-04-05 20:17:57"
+  },
+  "epoch_3": {
+    "group": "训练轮数消融",
+    "label": "3 epochs",
+    "use_4bit": false,
+    "train_loss": 2.0017,
+    "eval_loss": 2.0336,
+    "eval_ppl": 7.64,
+    "train_time_min": 6.6,
+    "finished_at": "2026-04-05 20:24:46"
+  },
+  "epoch_5": {
+    "group": "训练轮数消融",
+    "label": "5 epochs",
+    "use_4bit": false,
+    "train_loss": 1.9728,
+    "eval_loss": 2.0044,
+    "eval_ppl": 7.42,
+    "train_time_min": 10.9,
+    "finished_at": "2026-04-05 20:35:59"
+  }
+}

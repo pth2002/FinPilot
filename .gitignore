@@ -1,0 +1,69 @@
+# 模型权重和 checkpoint
+final_model/
+dpo_models/
+dpo_models_baseline/
+ablation_runs/
+output/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# 完整数据集（只传 sample）
+data/finance_sft_final.json
+data/finance_dpo_data.json
+data/finance_sft_cleaned.json
+data/finance_sft_generated.json
+data/finance_sft_gpt_cleaned.json
+data/finance_sft_new_generated.json
+data/finance_sft_generated_progress.jsonl
+data/finance_dpo_*_state.json
+data/finance_sft_generated_state.json
+data/review_sample_generated.json
+data/sample_cleaned.json
+
+# 原始数据
+finance_sft.json
+financial_news.xlsx
+financial_news.csv
+data/finance_sft.json
+
+# 日志
+*.log
+train.log
+train_final.log
+dpo_train.log
+
+# 评估中间产物
+eval_answers.json
+
+# 生成工具脚本（临时）
+_make_sample.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE
+.idea/
+.vscode/
+.claude/
+
+# 系统
+.DS_Store
+Thumbs.db
+
+# 环境
+venv/
+env/
+.env
+
+# 不上传的文档
+PROJECT_INTERVIEW_NOTES.md
+PROJECT_INTERVIEW_NOTES.pdf
+RECORD_VIDEO_GUIDE.md
+EXPERIMENT_CONFIG.md
+阅读/

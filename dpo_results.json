@@ -1,0 +1,167 @@
+{
+  "baseline": {
+    "ablation": "shared",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.14857602974642878,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.39,
+    "model_path": "./dpo_models/baseline",
+    "batch_size_used": 2
+  },
+  "beta_0.05": {
+    "ablation": "beta",
+    "config": {
+      "beta": 0.05,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.206807511785756,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.37,
+    "model_path": "./dpo_models/beta_0.05",
+    "batch_size_used": 2
+  },
+  "beta_0.3": {
+    "ablation": "beta",
+    "config": {
+      "beta": 0.3,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.09223205779233705,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.37,
+    "model_path": "./dpo_models/beta_0.3",
+    "batch_size_used": 2
+  },
+  "lr_5e-6": {
+    "ablation": "lr",
+    "config": {
+      "beta": 0.1,
+      "lr": 5e-06,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.29848852364913275,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.37,
+    "model_path": "./dpo_models/lr_5e-6",
+    "batch_size_used": 2
+  },
+  "lr_5e-5": {
+    "ablation": "lr",
+    "config": {
+      "beta": 0.1,
+      "lr": 5e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.04735927939131532,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.35,
+    "model_path": "./dpo_models/lr_5e-5",
+    "batch_size_used": 2
+  },
+  "epoch_2": {
+    "ablation": "epoch",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 2,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.0813912358134985,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 10.77,
+    "model_path": "./dpo_models/epoch_2",
+    "batch_size_used": 2
+  },
+  "epoch_3": {
+    "ablation": "epoch",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 3,
+      "loss_type": "sigmoid",
+      "data_variant": "original"
+    },
+    "train_loss": 0.05989719139061112,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 16.1,
+    "model_path": "./dpo_models/epoch_3",
+    "batch_size_used": 2
+  },
+  "data_equal_length": {
+    "ablation": "length",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "equal_length"
+    },
+    "train_loss": 0.12267108008913372,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.38,
+    "model_path": "./dpo_models/data_equal_length",
+    "batch_size_used": 2
+  },
+  "loss_ipo": {
+    "ablation": "loss",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "ipo",
+      "data_variant": "original"
+    },
+    "train_loss": 12.512444620547088,
+    "reward_accuracy": 1.0,
+    "elapsed_minutes": 5.37,
+    "model_path": "./dpo_models/loss_ipo",
+    "batch_size_used": 2
+  },
+  "noise_10": {
+    "ablation": "noise",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "noise_10"
+    },
+    "train_loss": 0.39770266802414606,
+    "reward_accuracy": 0.918918918918919,
+    "elapsed_minutes": 5.35,
+    "model_path": "./dpo_models/noise_10",
+    "batch_size_used": 2
+  },
+  "noise_30": {
+    "ablation": "noise",
+    "config": {
+      "beta": 0.1,
+      "lr": 1e-05,
+      "epochs": 1,
+      "loss_type": "sigmoid",
+      "data_variant": "noise_30"
+    },
+    "train_loss": 0.6241538358771282,
+    "reward_accuracy": 0.7567567567567568,
+    "elapsed_minutes": 5.37,
+    "model_path": "./dpo_models/noise_30",
+    "batch_size_used": 2
+  }
+}
