@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-DPO 训练脚本 - A股投资实战助手
 11 次消融实验：β / lr / epoch / 长度差 / loss类型 / 噪声比例
 """
 
 import sys
 import inspect
 
-# ============================================================
-# 0. 环境检测（必须在其他 import 之前打印）
-# ============================================================
 import trl
 print(f"trl version: {trl.__version__}")
 import transformers
@@ -23,9 +19,6 @@ print("\n=== DPOTrainer 可用参数 ===")
 print(inspect.signature(DPOTrainer.__init__))
 sys.stdout.flush()
 
-# ============================================================
-# 1. 正式 import
-# ============================================================
 import json
 import os
 import random
@@ -36,9 +29,6 @@ from datasets import Dataset
 from peft import LoraConfig, PeftModel, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# ============================================================
-# 2. 路径配置
-# ============================================================
 MODEL_PATH = (
     "/root/.cache/huggingface/hub/models--Qwen--Qwen2.5-3B"
     "/snapshots/3aab1f1954e9cc14eb9509a215f9e5ca08227a9b"
@@ -50,18 +40,14 @@ RESULTS_FILE     = "dpo_results.json"
 
 os.makedirs(DPO_MODELS_DIR, exist_ok=True)
 
-# ============================================================
-# 3. Tokenizer（全局共享，不需要每次重载）
-# ============================================================
+
 print("\n加载 tokenizer ...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-# ============================================================
-# 4. 模型加载工具
-# ============================================================
+
+# 模型加载
 def load_base_with_sft_merged():
-    """加载基座 + SFT LoRA，merge_and_unload() 后返回纯 base 权重（已含 SFT）"""
     print("  加载基座模型 ...")
     base = AutoModelForCausalLM.from_pretrained(
         MODEL_PATH,
@@ -75,9 +61,7 @@ def load_base_with_sft_merged():
     model = model.merge_and_unload()
     return model
 
-# ============================================================
-# 5. 数据集变体构造
-# ============================================================
+
 random.seed(42)
 
 print("\n加载原始 DPO 数据 ...")
@@ -85,10 +69,10 @@ with open(DPO_DATA_PATH, encoding="utf-8") as f:
     raw_data = json.load(f)
 print(f"原始数据条数: {len(raw_data)}")
 
-# ---------- 变体 A：原始数据 ----------
-dataset_original = raw_data  # 直接引用
+# 构建原始数据
+dataset_original = raw_data  
 
-# ---------- 变体 B：等长数据 ----------
+# 构建等长数据
 print("构造变体 B（等长 rejected）...")
 
 all_sentences = []
@@ -116,7 +100,7 @@ for d in raw_data:
     )
 print(f"  等长变体条数: {len(equal_data)}")
 
-# ---------- 变体 C / D：噪声数据（共享相同 seed 保证 10% ⊆ 30%）----------
+# 噪声数据
 print("构造变体 C/D（噪声数据）...")
 random.seed(42)
 all_noise_indices = random.sample(range(len(raw_data)), int(len(raw_data) * 0.30))
@@ -140,7 +124,7 @@ for i in noise_30_indices:
 print(f"  噪声 10% 条数: {len(noise_10_data)}，翻转数: {len(noise_10_indices)}")
 print(f"  噪声 30% 条数: {len(noise_30_data)}，翻转数: {len(noise_30_indices)}")
 
-# ---- 变体名 → 数据列表 ----
+
 DATA_VARIANTS = {
     "original":     dataset_original,
     "equal_length": equal_data,
@@ -154,9 +138,8 @@ def load_dataset_variant(variant_name: str) -> Dataset:
         [{"prompt": d["prompt"], "chosen": d["chosen"], "rejected": d["rejected"]} for d in data]
     )
 
-# ============================================================
-# 6. LoRA 配置（每次实验复用相同超参）
-# ============================================================
+
+# LoRA 配置
 NEW_LORA_CONFIG = LoraConfig(
     r=16,
     lora_alpha=32,
@@ -166,9 +149,8 @@ NEW_LORA_CONFIG = LoraConfig(
     task_type="CAUSAL_LM",
 )
 
-# ============================================================
-# 7. 11 次实验列表
-# ============================================================
+
+# 11 次实验列表
 BASELINE = {
     "beta":         0.1,
     "lr":           1e-5,
@@ -178,7 +160,7 @@ BASELINE = {
 }
 
 experiments = [
-    # 基线（多个消融共享）
+    # Baseline
     {"name": "baseline",          "ablation": "shared", **BASELINE},
     # β 消融
     {"name": "beta_0.05",         "ablation": "beta",   **{**BASELINE, "beta": 0.05}},
@@ -200,13 +182,10 @@ experiments = [
 
 assert len(experiments) == 11, f"预期 11 次实验，实际 {len(experiments)}"
 
-# ============================================================
-# 8. DPOConfig 构造辅助（探测可用参数，避免硬编码）
-# ============================================================
+
 _dpo_config_params = set(inspect.signature(DPOConfig.__init__).parameters.keys())
 
 def build_dpo_config(exp: dict, output_dir: str, batch_size: int, grad_accum: int) -> DPOConfig:
-    """根据实际可用参数构造 DPOConfig，跳过不存在的参数"""
     base_kwargs = dict(
         output_dir=output_dir,
         per_device_train_batch_size=batch_size,
@@ -222,7 +201,6 @@ def build_dpo_config(exp: dict, output_dir: str, batch_size: int, grad_accum: in
         report_to="none",
     )
 
-    # 参数名因 trl 版本不同可能有差异
     for key, val in [
         ("loss_type",        exp["loss_type"]),
         ("max_length",       1024),
@@ -231,13 +209,12 @@ def build_dpo_config(exp: dict, output_dir: str, batch_size: int, grad_accum: in
         if key in _dpo_config_params:
             base_kwargs[key] = val
         else:
-            print(f"  ⚠️  DPOConfig 不支持参数 '{key}'，已跳过")
+            print(f"    DPOConfig 不支持参数 '{key}'，已跳过")
 
     return DPOConfig(**base_kwargs)
 
-# ============================================================
-# 9. 训练辅助：带 OOM 重试
-# ============================================================
+
+# 带 OOM 重试
 def run_training(exp: dict) -> dict:
     """
     执行一次 DPO 训练，OOM 时自动降低 batch size 重试一次。
@@ -254,7 +231,7 @@ def run_training(exp: dict) -> dict:
             save_path = os.path.join(DPO_MODELS_DIR, exp["name"])
             dpo_config = build_dpo_config(exp, save_path, bs, ga)
 
-            # 检测 DPOTrainer 是否接受 tokenizer 参数（新版用 processing_class）
+            # 检测 DPOTrainer 是否接受 tokenizer 参数
             trainer_params = set(inspect.signature(DPOTrainer.__init__).parameters.keys())
             trainer_kwargs = dict(
                 model=model,
@@ -287,7 +264,7 @@ def run_training(exp: dict) -> dict:
 
             # 保存 adapter
             trainer.save_model(save_path)
-            print(f"  ✅ adapter 已保存到 {save_path}")
+            print(f"   adapter 已保存到 {save_path}")
 
             del model, trainer
             torch.cuda.empty_cache()
@@ -309,7 +286,7 @@ def run_training(exp: dict) -> dict:
             }
 
         except torch.cuda.OutOfMemoryError as oom:
-            print(f"  ❌ OOM（尝试 #{attempt}）：{oom}")
+            print(f"   OOM（尝试 #{attempt}）：{oom}")
             try:
                 del model, trainer
             except Exception:
@@ -319,10 +296,8 @@ def run_training(exp: dict) -> dict:
                 raise RuntimeError(f"实验 {exp['name']} 两次尝试均 OOM，放弃") from oom
             print("  降低 batch size 重试 ...")
 
-# ============================================================
+
 # 10. 主训练循环
-# ============================================================
-# 加载已有结果（断点续跑）
 results: dict = {}
 if os.path.exists(RESULTS_FILE):
     with open(RESULTS_FILE, encoding="utf-8") as f:
@@ -331,7 +306,7 @@ if os.path.exists(RESULTS_FILE):
 
 for exp in experiments:
     if exp["name"] in results:
-        print(f"⏭️  跳过已完成: {exp['name']}")
+        print(f"  跳过已完成: {exp['name']}")
         continue
 
     print(f"\n{'='*60}")
@@ -351,19 +326,18 @@ for exp in experiments:
     tl = result["train_loss"]
     tl_str = f"{tl:.4f}" if tl is not None else "N/A"
     rl_str = f"{rl:.4f}" if rl is not None else "N/A"
-    print(f"✅ {exp['name']}: loss={tl_str}, reward_acc={rl_str}, time={result['elapsed_minutes']:.1f}min")
+    print(f" {exp['name']}: loss={tl_str}, reward_acc={rl_str}, time={result['elapsed_minutes']:.1f}min")
 
     # 基线完成后暂停 5 秒，方便检查显存
     if exp["name"] == "baseline":
-        print("\n⏸️  基线训练完成，5 秒后继续...")
+        print("\n  基线训练完成，5 秒后继续...")
         sys.stdout.flush()
         time.sleep(5)
 
 print("\n\n所有 11 次实验完成！")
 
-# ============================================================
-# 11. Markdown 汇总表
-# ============================================================
+
+# 汇总
 def fmt(val, fmt_str=".4f"):
     return f"{val:{fmt_str}}" if val is not None else "N/A"
 
@@ -412,9 +386,8 @@ with open("dpo_summary.md", "w", encoding="utf-8") as f:
     f.write(summary)
 print("汇总表已保存到 dpo_summary.md")
 
-# ============================================================
-# 12. 推理对比（最优配置 vs SFT）
-# ============================================================
+
+# 推理对比（最优配置 vs SFT）
 if not ranked:
     print("\n无有效 reward_accuracy，跳过推理对比")
     sys.exit(0)
@@ -446,14 +419,12 @@ def generate(model, question: str, max_new_tokens: int = 300) -> str:
         out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
     ).strip()
 
-# ---- 加载 SFT-only 模型 ----
 print("\n加载 SFT-only 模型 ...")
 sft_base = AutoModelForCausalLM.from_pretrained(
     MODEL_PATH, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True
 )
 sft_model = PeftModel.from_pretrained(sft_base, SFT_ADAPTER_PATH)
 
-# ---- 加载最优 DPO 模型 ----
 print(f"加载最优 DPO 模型（{best_name}）...")
 dpo_base   = AutoModelForCausalLM.from_pretrained(
     MODEL_PATH, torch_dtype=torch.bfloat16, device_map="auto", trust_remote_code=True
@@ -474,4 +445,4 @@ for q in test_questions:
 
 del sft_model, dpo_model
 torch.cuda.empty_cache()
-print("\n\n✅ train_dpo.py 全部完成")
+print("\n\n train_dpo.py 全部完成")
