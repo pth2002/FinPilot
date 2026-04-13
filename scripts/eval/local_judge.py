@@ -1,10 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-local_judge.py — 本地运行 GPT-4o 裁判，读取 eval_answers.json 输出评估报告
-用法：
-    set OPENAI_API_KEY=sk-xxx   (Windows)
-    python local_judge.py
-"""
 
 import asyncio
 import json
@@ -13,9 +7,7 @@ import random
 import re
 import sys
 
-# ============================================================
-# 1. 读取回答文件
-# ============================================================
+
 _DIR = os.path.dirname(os.path.abspath(__file__))
 ANSWERS_PATH = os.path.join(_DIR, "eval_answers.json")
 OUTPUT_JSON  = os.path.join(_DIR, "eval_results.json")
@@ -33,9 +25,8 @@ test_questions = [r["question"]   for r in answers]
 sft_answers    = [r["sft_answer"] for r in answers]
 dpo_answers    = [r["dpo_answer"] for r in answers]
 
-# ============================================================
-# 2. OpenAI 客户端
-# ============================================================
+
+# OpenAI 客户端
 api_key = os.environ.get("OPENAI_API_KEY")
 if not api_key:
     print("错误：未设置 OPENAI_API_KEY 环境变量")
@@ -49,9 +40,8 @@ except ImportError:
 
 client = AsyncOpenAI(api_key=api_key)
 
-# ============================================================
-# 3. GPT-4o 裁判
-# ============================================================
+
+# 4o 裁判
 JUDGE_PROMPT = """你是一个A股投资专业评判员。请判断以下两个回答中哪一个更好。
 
 【评判标准】
@@ -139,9 +129,8 @@ print("\n开始 GPT-4o 裁判评估（并发 5）...")
 eval_results = asyncio.run(evaluate_all())
 print(f"评估完成，共 {len(eval_results)} 条")
 
-# ============================================================
-# 4. 辅助指标
-# ============================================================
+
+# 指标
 def calc_features(answers: list) -> dict:
     has_num    = sum(1 for a in answers if re.search(r'\d+[%％倍日天周月年元万亿]', a))
     fillers    = ["需要谨慎", "综合判断", "投资有风险", "密切关注",
@@ -168,17 +157,15 @@ sft_features["echo_ratio"] = calc_echo_ratio(test_questions, sft_answers)
 dpo_features               = calc_features(dpo_answers)
 dpo_features["echo_ratio"] = calc_echo_ratio(test_questions, dpo_answers)
 
-# ============================================================
-# 5. 统计胜率
-# ============================================================
+
+# 统计
 dpo_wins = sum(1 for r in eval_results if r["winner"] == "dpo")
 sft_wins = sum(1 for r in eval_results if r["winner"] == "sft")
 ties     = sum(1 for r in eval_results if r["winner"] == "tie")
 total    = len(eval_results)
 
-# ============================================================
-# 6. Markdown 报告
-# ============================================================
+
+# 报告
 def delta(a, b):
     d = b - a
     sign = "+" if d >= 0 else ""
@@ -217,9 +204,8 @@ report += "\n---\n*由 local_judge.py 生成*\n"
 
 print("\n" + report)
 
-# ============================================================
-# 7. 保存文件
-# ============================================================
+
+# 保存
 with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
     json.dump(
         {
@@ -244,4 +230,4 @@ with open(OUTPUT_MD, "w", encoding="utf-8") as f:
     f.write(report)
 print(f"Markdown 报告已保存到 {OUTPUT_MD}")
 
-print("\n✅ local_judge.py 全部完成")
+print("\n local_judge.py 全部完成")
