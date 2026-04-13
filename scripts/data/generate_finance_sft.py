@@ -95,7 +95,6 @@ def save_state(state):
 
 
 def validate_and_clean(item, seen_instructions):
-    """校验单条数据，通过返回清洗后的dict，否则返回None。纯函数，不修改seen_instructions。"""
     if not (isinstance(item, dict) and "instruction" in item and "output" in item):
         return None
     inst = item["instruction"].strip()
