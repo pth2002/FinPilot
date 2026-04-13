@@ -223,7 +223,6 @@ def free_memory(model=None):
 
 # 单次实验
 def run_one(exp: dict, tokenizer) -> dict:
-    """运行单组实验，返回结果 dict；FP16 OOM 时抛出 torch.cuda.OutOfMemoryError。"""
     global fp16_oom_detected
 
     
