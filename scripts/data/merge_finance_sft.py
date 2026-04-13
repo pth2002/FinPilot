@@ -7,7 +7,7 @@ with open("data/finance_sft_new_generated.json", encoding="utf-8") as f:
 
 all_data = cleaned + generated
 
-# 最终去重
+# 去重
 seen = set()
 unique = []
 for d in all_data:
