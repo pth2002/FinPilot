@@ -9,7 +9,7 @@ output/
 *.pt
 *.pth
 
-# 完整数据集（只传 sample）
+# 完整数据集
 data/finance_sft_final.json
 data/finance_dpo_data.json
 data/finance_sft_cleaned.json
@@ -34,10 +34,10 @@ train.log
 train_final.log
 dpo_train.log
 
-# 评估中间产物
+# 评估过程结果
 eval_answers.json
 
-# 生成工具脚本（临时）
+# 生成工具脚本
 _make_sample.py
 
 # Python
@@ -60,10 +60,3 @@ Thumbs.db
 venv/
 env/
 .env
-
-# 不上传的文档
-PROJECT_INTERVIEW_NOTES.md
-PROJECT_INTERVIEW_NOTES.pdf
-RECORD_VIDEO_GUIDE.md
-EXPERIMENT_CONFIG.md
-阅读/
