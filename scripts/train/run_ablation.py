@@ -1,13 +1,5 @@
 #!/usr/bin/env python3
-"""
-run_ablation.py — Qwen2.5-3B LoRA 消融实验
 
-用法：
-    python run_ablation.py
-
-断点续传：每组结果保存到 ablation_results.json，中断后重跑跳过已完成的组。
-量化消融第一组运行；若 FP16 OOM，后续实验自动切换 4bit。
-"""
 import gc
 import json
 import math
@@ -34,9 +26,7 @@ from transformers import (
     TrainingArguments,
 )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 全局配置
-# ──────────────────────────────────────────────────────────────────────────────
+
 MODEL_NAME   = "Qwen/Qwen2.5-3B"
 DATA_PATH    = "./data/finance_sft_final.json"
 RESULTS_FILE = "ablation_results.json"
@@ -47,14 +37,12 @@ GRAD_ACCUM   = 4
 EVAL_RATIO   = 0.1
 SEED         = 42
 
-# FP16 OOM 时全局切换 4bit
 fp16_oom_detected = False
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 消融实验定义（量化消融放第一组）
-# ──────────────────────────────────────────────────────────────────────────────
+
+# 消融实验定义
 EXPERIMENTS = [
-    # ① 量化消融（最先运行，用于探测 FP16 是否 OOM）
+    # 量化消融
     dict(name="quant_fp16",  group="量化消融",           label="FP16",
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
@@ -62,7 +50,7 @@ EXPERIMENTS = [
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=True,  n_samples=5000, lr=1e-4, epochs=3),
 
-    # ② rank 消融
+    # rank 消融
     dict(name="rank_4",      group="rank消融",           label="rank=4",
          rank=4,  lora_alpha=8,   target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
@@ -73,7 +61,7 @@ EXPERIMENTS = [
          rank=64, lora_alpha=128, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
 
-    # ③ target_modules 消融
+    # target_modules 消融
     dict(name="target_qv",   group="target_modules消融", label="q_proj+v_proj",
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
@@ -83,7 +71,7 @@ EXPERIMENTS = [
                          "gate_proj","up_proj","down_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
 
-    # ④ 数据量消融
+    # 数据量消融
     dict(name="data_5000",   group="数据量消融",         label="全量5000条",
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=3),
@@ -91,7 +79,7 @@ EXPERIMENTS = [
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=1500, lr=1e-4, epochs=3),
 
-    # ⑤ 学习率消融
+    # 学习率消融
     dict(name="lr_1e3",      group="学习率消融",         label="lr=1e-3",
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-3, epochs=3),
@@ -102,7 +90,7 @@ EXPERIMENTS = [
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=5e-5, epochs=3),
 
-    # ⑥ 训练轮数消融
+    # 训练轮数消融
     dict(name="epoch_1",     group="训练轮数消融",       label="1 epoch",
          rank=16, lora_alpha=32, target_modules=["q_proj", "v_proj"],
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=1),
@@ -114,9 +102,6 @@ EXPERIMENTS = [
          force_4bit=False, n_samples=5000, lr=1e-4, epochs=5),
 ]
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 结果持久化
-# ──────────────────────────────────────────────────────────────────────────────
 
 def load_results() -> dict:
     if os.path.exists(RESULTS_FILE):
@@ -130,10 +115,8 @@ def save_results(results: dict):
         json.dump(results, f, ensure_ascii=False, indent=2)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 数据加载与 tokenization
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 数据加载
 def load_and_split(n_samples: int):
     with open(DATA_PATH, encoding="utf-8") as f:
         data = json.load(f)
@@ -196,10 +179,8 @@ def build_datasets(train_raw, eval_raw, tokenizer) -> tuple[Dataset, Dataset]:
     return to_hf(train_raw), to_hf(eval_raw)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 模型加载
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 模型加载
 def load_model(use_4bit: bool):
     if use_4bit:
         bnb_config = BitsAndBytesConfig(
@@ -239,15 +220,13 @@ def free_memory(model=None):
         torch.cuda.synchronize()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 单次实验
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 单次实验
 def run_one(exp: dict, tokenizer) -> dict:
     """运行单组实验，返回结果 dict；FP16 OOM 时抛出 torch.cuda.OutOfMemoryError。"""
     global fp16_oom_detected
 
-    # 是否使用 4bit：force_4bit=True 时强制；否则看全局 OOM 标志
+    
     use_4bit = exp["force_4bit"] or fp16_oom_detected
 
     print(f"\n{'='*60}")
@@ -257,12 +236,12 @@ def run_one(exp: dict, tokenizer) -> dict:
     print(f"  n_samples={exp['n_samples']}, 4bit={use_4bit}")
     print(f"{'='*60}")
 
-    # ── 数据 ──
+    # 数据
     train_raw, eval_raw = load_and_split(exp["n_samples"])
     print(f"  train={len(train_raw)}, eval={len(eval_raw)}")
     train_ds, eval_ds = build_datasets(train_raw, eval_raw, tokenizer)
 
-    # ── 模型 ──
+    # 模型
     model = load_model(use_4bit)
 
     lora_cfg = LoraConfig(
@@ -276,7 +255,7 @@ def run_one(exp: dict, tokenizer) -> dict:
     model = get_peft_model(model, lora_cfg)
     model.print_trainable_parameters()
 
-    # ── 训练参数 ──
+    # 参数
     run_dir = os.path.join(OUTPUT_DIR, exp["name"])
     os.makedirs(run_dir, exist_ok=True)
 
@@ -315,13 +294,11 @@ def run_one(exp: dict, tokenizer) -> dict:
         data_collator=data_collator,
     )
 
-    # ── 训练 ──
+    # 训练
     t0 = time.time()
     train_output = trainer.train()
     elapsed_min = (time.time() - t0) / 60
 
-    # ── 提取指标 ──
-    # 训练 loss：取 log_history 中最后一个含 "loss" 的 step 条目
     train_loss = float("nan")
     for entry in reversed(trainer.state.log_history):
         if "loss" in entry and "eval_loss" not in entry:
@@ -330,7 +307,7 @@ def run_one(exp: dict, tokenizer) -> dict:
 
     eval_result = trainer.evaluate()
     eval_loss = eval_result["eval_loss"]
-    eval_ppl  = math.exp(min(eval_loss, 20))  # 防止 exp 溢出
+    eval_ppl  = math.exp(min(eval_loss, 20)) 
 
     result = {
         "group":          exp["group"],
@@ -347,10 +324,8 @@ def run_one(exp: dict, tokenizer) -> dict:
     return result
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 结果汇总表（Markdown）
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 汇总
 def print_summary(results: dict):
     # 按 group 排列
     group_order = [
@@ -381,17 +356,14 @@ def print_summary(results: dict):
     print()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 主流程
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 主流程
 def main():
     global fp16_oom_detected
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     results = load_results()
 
-    # ── tokenizer（所有实验共用）──
     print(f"Loading tokenizer: {MODEL_NAME}")
     tokenizer = AutoTokenizer.from_pretrained(
         MODEL_NAME, trust_remote_code=True, padding_side="right"
@@ -404,7 +376,6 @@ def main():
     for i, exp in enumerate(EXPERIMENTS, 1):
         name = exp["name"]
 
-        # 断点续传：已完成则跳过
         if name in results:
             print(f"[{i}/{total}] skip {name} (already done)")
             continue
@@ -424,12 +395,12 @@ def main():
         except torch.cuda.OutOfMemoryError:
             free_memory()
 
-            # 量化消融的 FP16 实验 OOM → 记录并切换全局 4bit
+            # FP16 OOM -> 切换全局 4bit
             if not exp["force_4bit"]:
                 print(f"  [OOM] FP16 out of memory for {name}, switching to 4bit globally.")
                 fp16_oom_detected = True
 
-                # 以 4bit 重试
+                # 4bit 重试
                 try:
                     result = run_one(exp, tokenizer)
                     result["oom_fallback"] = True
