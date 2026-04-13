@@ -158,7 +158,6 @@ JUDGE_PROMPT = """你是一个A股投资专业评判员。请判断以下两个�
 
 async def judge_pair_async(client, question: str, answer_a: str, answer_b: str,
                            real_a_is_dpo: bool) -> tuple:
-    """返回 (winner: 'dpo'/'sft'/'tie', raw_response: str)"""
     for retry in range(3):
         try:
             resp = await client.chat.completions.create(
@@ -276,7 +275,6 @@ ties     = sum(1 for r in eval_results if r["winner"] == "tie")
 total    = len(eval_results)
 
 
-=
 def delta(a, b, pct=False):
     d = b - a
     return f"{d:+.1f}{'%' if pct else ''}"
