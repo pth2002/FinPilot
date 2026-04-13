@@ -1,9 +1,9 @@
 from openai import AsyncOpenAI
 import asyncio, json, re, os
 
-client = AsyncOpenAI()  # 自动读取 OPENAI_API_KEY
+client = AsyncOpenAI() 
 
-CONCURRENCY = 5  # 并发请求数
+CONCURRENCY = 5  
 
 SYSTEM_PROMPT = """你是一个A股投资实战教练，专门解答中国散户投资者的真实问题。
 
@@ -108,7 +108,6 @@ def validate_and_clean(item, seen_instructions):
     if inst in seen_instructions:
         return None
 
-    # 相似度去重
     for seen in seen_instructions:
         common = len(set(inst) & set(seen))
         sim = common / max(len(set(inst)), len(set(seen)), 1)
@@ -129,7 +128,6 @@ def validate_and_clean(item, seen_instructions):
 
 
 async def fetch_batch(cat_name, cat_prompt, existing_questions):
-    """发一个API请求，返回原始items列表，失败返回[]。"""
     existing_summary = ""
     if existing_questions:
         recent = existing_questions[-30:]
@@ -159,7 +157,6 @@ async def fetch_batch(cat_name, cat_prompt, existing_questions):
 async def generate_category(cat_name, cat_prompt, cat_target, already_done,
                              seen_instructions, all_generated, category_progress,
                              state, save_lock):
-    """为单个类别并发生成，直到达到目标数量。"""
     existing_questions = [
         d["instruction"] for d in all_generated
         if d.get("_category") == cat_name
@@ -172,7 +169,6 @@ async def generate_category(cat_name, cat_prompt, cat_target, already_done,
 
     while cat_data_count < cat_target and batch_round < max_rounds:
         batch_round += 1
-        # 每轮并发 CONCURRENCY 个请求
         tasks = [
             fetch_batch(cat_name, cat_prompt, list(existing_questions))
             for _ in range(CONCURRENCY)
@@ -188,7 +184,6 @@ async def generate_category(cat_name, cat_prompt, cat_target, already_done,
                 if cleaned is None:
                     continue
                 inst = cleaned["instruction"]
-                # 防止同一轮内重复
                 if inst in seen_instructions:
                     continue
                 seen_instructions.add(inst)
@@ -200,7 +195,6 @@ async def generate_category(cat_name, cat_prompt, cat_target, already_done,
         cat_data_count += len(round_valid)
         category_progress[cat_name] = cat_data_count
 
-        # 保存状态（加锁避免并发写冲突）
         async with save_lock:
             state["all_generated"] = all_generated
             state["seen_instructions"] = list(seen_instructions)
@@ -237,8 +231,7 @@ async def main():
 
     save_lock = asyncio.Lock()
 
-    # 各类别顺序处理（类别间串行，类别内并发）
-    # 串行是为了让 existing_questions / seen_instructions 去重更准确
+  
     for idx, (cat_name, cat_config) in enumerate(categories.items()):
         cat_target = per_category + (1 if idx < extra else 0)
         already_done = category_progress.get(cat_name, 0)
@@ -252,7 +245,6 @@ async def main():
             state, save_lock
         )
 
-    # 保存最终输出（去掉内部字段 _category）
     output = [
         {"instruction": d["instruction"], "input": d["input"], "output": d["output"]}
         for d in all_generated
