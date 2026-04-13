@@ -28,7 +28,7 @@ SYSTEM_PROMPT = """你是一个A股投资领域的数据标注专家，需要为
 
 
 async def generate_batch(questions: list[str]) -> list[dict]:
-    """一次生成 5 组偏好对，失败最多重试 3 次。"""
+    #一次生成 5 组偏好对，失败最多重试 3 次。
     q_list = "\n".join(f"{i+1}. {q}" for i, q in enumerate(questions))
 
     for retry in range(3):
@@ -55,7 +55,7 @@ async def generate_batch(questions: list[str]) -> list[dict]:
                 # chosen 必须含具体数字
                 if not re.search(r'\d+[%％倍日天周月年元万亿]', chosen):
                     continue
-                # chosen 要比 rejected 长（内容更丰富）
+                # chosen 要比 rejected 长
                 if len(chosen) <= len(rejected):
                     continue
                 # chosen 至少 100 字
@@ -79,12 +79,12 @@ async def main():
     all_instructions = [d["instruction"] for d in sft_data]
     random.seed(42)
     random.shuffle(all_instructions)
-    selected = all_instructions[:2000]           # ← 2000 条
+    selected = all_instructions[:2000]           
 
-    batches = [selected[i:i+5] for i in range(0, len(selected), 5)]  # 400 批
+    batches = [selected[i:i+5] for i in range(0, len(selected), 5)] 
 
     all_dpo_data: list[dict] = []
-    semaphore = asyncio.Semaphore(5)             # 并发 5 个请求
+    semaphore = asyncio.Semaphore(5)             
 
     async def process_batch(batch_idx: int, questions: list[str]):
         async with semaphore:
