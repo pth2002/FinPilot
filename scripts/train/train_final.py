@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 train_final.py — Qwen2.5-3B + LoRA 最终训练脚本
-环境: PyTorch 2.8.0, Python 3.12, CUDA 12.8, RTX 5090 32GB
 """
 import gc
 import importlib.metadata
@@ -14,9 +13,6 @@ import time
 
 import torch
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 启动时打印环境信息，方便排查版本问题
-# ──────────────────────────────────────────────────────────────────────────────
 def print_env():
     print("=" * 60)
     print("环境信息")
@@ -40,7 +36,6 @@ def print_env():
 
 print_env()
 
-# 延迟导入（打印完环境信息再导入，方便在 import 报错时也能看到版本）
 from datasets import Dataset
 from peft import LoraConfig, TaskType, get_peft_model
 from transformers import (
@@ -51,9 +46,7 @@ from transformers import (
     TrainingArguments,
 )
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 路径 & 超参
-# ──────────────────────────────────────────────────────────────────────────────
+
 MODEL_PATH = (
     "/root/.cache/huggingface/hub/"
     "models--Qwen--Qwen2.5-3B/snapshots/"
@@ -63,7 +56,7 @@ DATA_PATH  = "/root/autodl-tmp/data/finance_sft_final.json"
 OUTPUT_DIR = "./final_model"
 LOG_DIR    = "./logs"
 
-# LoRA（消融最优）
+# LoRA
 LORA_RANK       = 16
 LORA_ALPHA      = 32
 LORA_DROPOUT    = 0.05
@@ -73,10 +66,8 @@ TARGET_MODULES  = ["q_proj", "k_proj", "v_proj", "o_proj",
 # 训练
 LEARNING_RATE  = 1e-4
 NUM_EPOCHS     = 3
-# RTX 5090 32GB：Qwen2.5-3B FP16 模型 ~6GB，LoRA 优化器状态 <1GB
-# batch=8 × seq=1024 激活约 4-6GB，总计 <16GB，显存绰绰有余
 PER_DEVICE_BATCH  = 8
-GRAD_ACCUM        = 4       # 有效批次 = 32
+GRAD_ACCUM        = 4       
 MAX_SEQ_LEN       = 1024
 WARMUP_RATIO      = 0.05
 EVAL_RATIO        = 0.1
@@ -90,10 +81,8 @@ TEST_QUESTIONS = [
     "集合竞价阶段突然大幅拉高，能不能追进去？",
 ]
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 数据
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 数据
 def load_data():
     with open(DATA_PATH, encoding="utf-8") as f:
         data = json.load(f)
@@ -125,7 +114,6 @@ def build_datasets(train_raw, eval_raw, tokenizer):
 
             full_text = prompt + out + tokenizer.eos_token
 
-            # 先分别 tokenize，再拼 label mask
             full_enc   = tokenizer(full_text, truncation=True, max_length=MAX_SEQ_LEN)
             prompt_len = len(
                 tokenizer(prompt, truncation=True, max_length=MAX_SEQ_LEN)["input_ids"]
@@ -157,10 +145,8 @@ def build_datasets(train_raw, eval_raw, tokenizer):
     return to_dataset(train_raw), to_dataset(eval_raw)
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 模型
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 模型
 def build_model():
     print(f"\nLoading model: {MODEL_PATH}")
     model = AutoModelForCausalLM.from_pretrained(
@@ -185,10 +171,8 @@ def build_model():
     return model
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 训练
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 训练
 def train(model, train_ds, eval_ds, tokenizer):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     os.makedirs(LOG_DIR, exist_ok=True)
@@ -216,7 +200,6 @@ def train(model, train_ds, eval_ds, tokenizer):
         seed=SEED,
         dataloader_num_workers=0,
         remove_unused_columns=False,
-        # 梯度检查点：节省激活显存，RTX 5090 够用可关，开启可额外省 ~30%
         gradient_checkpointing=False,
     )
 
@@ -272,10 +255,8 @@ def train(model, train_ds, eval_ds, tokenizer):
     return trainer
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 推理测试（训练显存释放后重新加载）
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 推理测试（训练显存释放后重新加载）
 def inference_test():
     """释放训练显存后，重新加载 base model + LoRA adapter 进行推理测试。"""
     from peft import PeftModel
@@ -334,10 +315,8 @@ def inference_test():
     torch.cuda.empty_cache()
 
 
-# ──────────────────────────────────────────────────────────────────────────────
-# 主流程
-# ──────────────────────────────────────────────────────────────────────────────
 
+# 主流程
 def main():
     # tokenizer
     print(f"\nLoading tokenizer ...")
