@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-DPO 评估脚本 - A股投资实战助手
-50 条随机测试集，GPT-4o 作为裁判，A/B 位置随机交换
-"""
-
 import asyncio
 import json
 import os
@@ -15,9 +9,7 @@ import torch
 from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-# ============================================================
-# 1. 路径配置
-# ============================================================
+
 MODEL_PATH       = (
     "/root/.cache/huggingface/hub/models--Qwen--Qwen2.5-3B"
     "/snapshots/3aab1f1954e9cc14eb9509a215f9e5ca08227a9b"
@@ -28,9 +20,8 @@ RESULTS_FILE     = "dpo_results.json"
 EVAL_OUTPUT_JSON = "eval_results.json"
 EVAL_OUTPUT_MD   = "eval_report.md"
 
-# ============================================================
-# 2. 确定最优 DPO adapter 路径
-# ============================================================
+
+# 确定最优 DPO adapter 路径
 if not os.path.exists(RESULTS_FILE):
     print(f"错误：找不到 {RESULTS_FILE}，请先运行 train_dpo.py")
     sys.exit(1)
@@ -50,7 +41,7 @@ if not ranked:
         [(n, r) for n, r in train_results.items() if r.get("train_loss") is not None],
         key=lambda x: x[1]["train_loss"],
     )
-    print("⚠️  所有实验均无 reward_accuracy，改用 train_loss 最低作为最优配置")
+    print("  所有实验均无 reward_accuracy，改用 train_loss 最低作为最优配置")
 
 if not ranked:
     print("错误：dpo_results.json 中无有效结果")
@@ -61,16 +52,13 @@ DPO_ADAPTER_PATH = best_result["model_path"]
 print(f"最优配置: {best_name}")
 print(f"DPO adapter 路径: {DPO_ADAPTER_PATH}")
 
-# ============================================================
-# 3. Tokenizer
-# ============================================================
+
 print("\n加载 tokenizer ...")
 tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH, trust_remote_code=True)
 tokenizer.pad_token = tokenizer.eos_token
 
-# ============================================================
-# 4. 模型加载工具
-# ============================================================
+
+# 模型加载
 def load_sft_model():
     print("  加载 SFT-only 模型 ...")
     base  = AutoModelForCausalLM.from_pretrained(
@@ -90,9 +78,7 @@ def load_dpo_model(dpo_adapter_path: str):
     model.eval()
     return model
 
-# ============================================================
-# 5. 生成工具
-# ============================================================
+
 @torch.no_grad()
 def generate(model, question: str, max_new_tokens: int = 300) -> str:
     prompt = f"### 指令:\n{question}\n\n### 回答:\n"
@@ -108,9 +94,8 @@ def generate(model, question: str, max_new_tokens: int = 300) -> str:
         out[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True
     ).strip()
 
-# ============================================================
-# 6. 测试集准备（seed=2024，随机抽 50 条）
-# ============================================================
+
+# 测试集准备
 print("\n准备测试集 ...")
 with open(SFT_DATA_PATH, encoding="utf-8") as f:
     sft_data = json.load(f)
@@ -120,9 +105,8 @@ test_set       = random.sample(sft_data, 50)
 test_questions = [d["instruction"] for d in test_set]
 print(f"测试集大小: {len(test_questions)} 条")
 
-# ============================================================
-# 7. 生成 SFT 回答
-# ============================================================
+
+# 生成回答
 print("\n生成 SFT-only 回答 ...")
 sft_model  = load_sft_model()
 sft_answers = []
@@ -135,9 +119,8 @@ for i, q in enumerate(test_questions, 1):
 del sft_model
 torch.cuda.empty_cache()
 
-# ============================================================
-# 8. 生成 DPO 回答
-# ============================================================
+
+# 生成 DPO 回答
 print("\n生成 SFT+DPO 回答 ...")
 dpo_model   = load_dpo_model(DPO_ADAPTER_PATH)
 dpo_answers = []
@@ -150,9 +133,8 @@ for i, q in enumerate(test_questions, 1):
 del dpo_model
 torch.cuda.empty_cache()
 
-# ============================================================
-# 9. GPT-4o 裁判
-# ============================================================
+
+# 裁判
 JUDGE_PROMPT = """你是一个A股投资专业评判员。请判断以下两个回答中哪一个更好。
 
 【评判标准】
@@ -217,10 +199,11 @@ async def evaluate_all() -> list:
         sys.exit(1)
 
     client    = AsyncOpenAI(api_key=api_key)
-    semaphore = asyncio.Semaphore(5)  # 并发 5 个请求
+    semaphore = asyncio.Semaphore(5)  
 
     random.seed(2024)
-    ab_flags = [random.random() < 0.5 for _ in range(50)]  # 预先确定 A/B 顺序
+    # 预先确定 A/B 顺序
+    ab_flags = [random.random() < 0.5 for _ in range(50)] 
 
     async def evaluate_one(i: int) -> dict:
         q         = test_questions[i]
@@ -253,9 +236,9 @@ print("\n开始 GPT-4o 裁判评估（并发 5）...")
 eval_results = asyncio.run(evaluate_all())
 print(f"评估完成，共 {len(eval_results)} 条")
 
-# ============================================================
-# 10. 计算指标
-# ============================================================
+
+
+# 计算指标
 def calc_features(answers: list[str]) -> dict:
     has_num = sum(
         1 for a in answers if re.search(r'\d+[%％倍日天周月年元万亿]', a)
@@ -292,9 +275,8 @@ sft_wins = sum(1 for r in eval_results if r["winner"] == "sft")
 ties     = sum(1 for r in eval_results if r["winner"] == "tie")
 total    = len(eval_results)
 
-# ============================================================
-# 11. 输出 Markdown 报告
-# ============================================================
+
+=
 def delta(a, b, pct=False):
     d = b - a
     return f"{d:+.1f}{'%' if pct else ''}"
@@ -335,9 +317,8 @@ report += f"""
 
 print("\n" + report)
 
-# ============================================================
-# 12. 保存原始数据和报告
-# ============================================================
+
+# 保存
 with open(EVAL_OUTPUT_JSON, "w", encoding="utf-8") as f:
     json.dump(
         {
@@ -367,4 +348,4 @@ with open(EVAL_OUTPUT_MD, "w", encoding="utf-8") as f:
     f.write(report)
 print(f"Markdown 报告已保存到 {EVAL_OUTPUT_MD}")
 
-print("\n✅ eval_dpo.py 全部完成")
+print("\n eval_dpo.py 全部完成")
