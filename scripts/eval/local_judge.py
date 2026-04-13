@@ -65,7 +65,6 @@ JUDGE_PROMPT = """你是一个A股投资专业评判员。请判断以下两个�
 
 async def judge_pair(question: str, answer_a: str, answer_b: str,
                      real_a_is_dpo: bool) -> tuple:
-    """返回 (winner: 'dpo'/'sft'/'tie', raw_response: str)"""
     for retry in range(3):
         try:
             resp = await client.chat.completions.create(
